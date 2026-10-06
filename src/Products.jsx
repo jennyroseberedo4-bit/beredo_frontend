@@ -1,158 +1,326 @@
-import { useEffect, useState } from "react";
-import api from "./api";
- 
-const empty = { product_name: "", description: "", price: "", quantity: "" };
-const peso = (n) => `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
- 
-export default function Products({ user }) {
-  const isAdmin = user.role === "admin";
-  const [products, setProducts] = useState([]);
-  const [form, setForm] = useState(empty);
-  const [editingId, setEditingId] = useState(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
- 
-  const load = async () => {
-    try {
-      const { data } = await api.get("/api/products");
-      setProducts(data.data);
-    } catch {
-      setError("Could not load products.");
-    } finally {
-      setLoading(false);
-    }
-  };
- 
-  useEffect(() => { load(); }, []);
- 
-  const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
- 
-  const reset = () => { setForm(empty); setEditingId(null); };
- 
-  const submit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSaving(true);
-    try {
-      if (editingId) await api.put(`/api/products/${editingId}`, form);
-      else await api.post("/api/products", form);
-      reset();
-      await load();
-    } catch (err) {
-      setError(err.response?.data?.error || "Save failed.");
-    } finally {
-      setSaving(false);
-    }
-  };
- 
-  const edit = (p) => {
-    setEditingId(p.id);
-    setForm({
-      product_name: p.product_name,
-      description: p.description || "",
-      price: p.price,
-      quantity: p.quantity,
-    });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
- 
-  const remove = async (p) => {
-    if (!window.confirm(`Delete "${p.product_name}"?`)) return;
-    setError("");
-    try {
-      await api.delete(`/api/products/${p.id}`);
-      await load();
-    } catch (err) {
-      setError(err.response?.data?.error || "Delete failed.");
-    }
-  };
- 
-  return (
-    <main className="container">
-      <div className="page-head">
-        <div>
-          <h1>Products</h1>
-          <p className="muted">
-            {isAdmin ? "Manage your product catalog." : "Browse the product catalog (view only)."}
-          </p>
-        </div>
-      </div>
- 
-      {error && <div className="alert">{error}</div>}
- 
-      {isAdmin && (
-        <form onSubmit={submit} className="card form-grid">
-          <h2 className="span-2">{editingId ? "Edit product" : "Add product"}</h2>
- 
-          <label className="span-2">
-            Name
-            <input value={form.product_name} onChange={set("product_name")} maxLength={100} required />
-          </label>
- 
-          <label className="span-2">
-            Description
-            <textarea rows="3" value={form.description} onChange={set("description")} />
-          </label>
- 
-          <label>
-            Price (₱)
-            <input type="number" step="0.01" min="0" value={form.price} onChange={set("price")} required />
-          </label>
- 
-          <label>
-            Quantity
-            <input type="number" min="0" step="1" value={form.quantity} onChange={set("quantity")} required />
-          </label>
- 
-          <div className="span-2 row">
-            <button className="btn btn-primary" disabled={saving}>
-              {saving ? "Saving…" : editingId ? "Update product" : "Add product"}
-            </button>
-            {editingId && (
-              <button type="button" className="btn btn-ghost" onClick={reset}>
-                Cancel
-              </button>
-            )}
-          </div>
-        </form>
-      )}
- 
-      <div className="card table-card">
-        {loading ? (
-          <p className="center muted pad">Loading products…</p>
-        ) : products.length === 0 ? (
-          <p className="center muted pad">No products yet.</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th className="num">Price</th>
-                <th className="num">Qty</th>
-                {isAdmin && <th className="actions-col">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p.id}>
-                  <td data-label="Name" className="strong">{p.product_name}</td>
-                  <td data-label="Description" className="muted">{p.description || "—"}</td>
-                  <td data-label="Price" className="num">{peso(p.price)}</td>
-                  <td data-label="Qty" className="num">{p.quantity}</td>
-                  {isAdmin && (
-                    <td data-label="Actions" className="actions-col">
-                      <button className="btn btn-ghost btn-sm" onClick={() => edit(p)}>Edit</button>
-                      <button className="btn btn-danger btn-sm" onClick={() => remove(p)}>Delete</button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </main>
-  );
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:opsz,wght@9..144,300;9..144,400&display=swap");
+
+/* ---------- Theme tokens: red + pink ---------- */
+:root {
+  --bg: #fff6f7;
+  --surface: #ffffff;
+  --border: #f7dde2;
+  --text: #3a1420;
+  --muted: #a0707c;
+  --accent: #e11d48;
+  --accent-2: #f472b6;
+  --accent-text: #ffffff;
+  --grad: linear-gradient(135deg, #e11d48 0%, #f472b6 100%);
+  --soft: #ffe4ea;
+  --danger: #be123c;
+  --danger-bg: #fff1f3;
+  --ring: rgba(225, 29, 72, 0.16);
+  --blob-1: rgba(244, 114, 182, 0.2);
+  --blob-2: rgba(225, 29, 72, 0.1);
+  --shadow: 0 1px 2px rgba(190, 18, 60, 0.04), 0 12px 32px rgba(190, 18, 60, 0.07);
+  --radius: 20px;
+  --sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Fraunces", Georgia, serif;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #17080d;
+  --surface: #230f16;
+  --border: #3a1b25;
+  --text: #fde8ed;
+  --muted: #c496a2;
+  --accent: #fb7185;
+  --accent-2: #f9a8d4;
+  --accent-text: #2a0a14;
+  --grad: linear-gradient(135deg, #fb7185 0%, #f9a8d4 100%);
+  --soft: #3a1520;
+  --danger: #fda4af;
+  --danger-bg: rgba(251, 113, 133, 0.1);
+  --ring: rgba(251, 113, 133, 0.22);
+  --blob-1: rgba(251, 113, 133, 0.14);
+  --blob-2: rgba(249, 168, 212, 0.08);
+  --shadow: none;
+  color-scheme: dark;
+}
+
+/* ---------- Base ---------- */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  font-weight: 400;
+  background:
+    radial-gradient(900px 500px at 8% -10%, var(--blob-1), transparent 60%),
+    radial-gradient(700px 500px at 100% 0%, var(--blob-2), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--text);
+  line-height: 1.55;
+  letter-spacing: 0.005em;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+h1, h2 { font-family: var(--serif); font-weight: 300; letter-spacing: -0.02em; }
+h1 { font-size: 2.2rem; margin: 0; line-height: 1.1; }
+h2 { font-size: 1.3rem; margin: 0; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.strong { font-weight: 600; }
+.center { text-align: center; }
+.pad { padding: 2.5rem 1rem; }
+
+/* ---------- Top bar: floating pill ---------- */
+.topbar {
+  position: sticky; top: 12px; z-index: 10;
+  padding: 0 1rem;
+  background: none; border: 0;
+}
+.topbar-inner {
+  max-width: 960px; margin: 0 auto; padding: 0.55rem 0.7rem 0.55rem 1.1rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+}
+.brand { display: flex; align-items: center; gap: 0.6rem; font-weight: 500; letter-spacing: 0.02em; }
+.brand-mark { width: 14px; height: 14px; border-radius: 50%; background: var(--grad); }
+.topbar-right { display: flex; align-items: center; gap: 0.5rem; }
+.who { font-size: 0.88rem; color: var(--muted); }
+
+.badge {
+  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 500;
+  padding: 0.2rem 0.6rem; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--muted); background: var(--soft);
+}
+.badge-admin { background: var(--grad); color: var(--accent-text); border-color: transparent; }
+
+/* ---------- Layout ---------- */
+.container { max-width: 960px; margin: 0 auto; padding: 2.5rem 1rem 4rem; display: grid; gap: 1.75rem; }
+.page-head { display: flex; justify-content: space-between; align-items: end; gap: 1rem; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.6rem;
+}
+
+/* ---------- Forms ---------- */
+label {
+  display: grid; gap: 0.4rem;
+  font-size: 0.72rem; font-weight: 500; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.09em;
+}
+
+input, textarea {
+  width: 100%; font: inherit; font-size: 0.98rem; letter-spacing: 0;
+  text-transform: none; color: var(--text);
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 14px; padding: 0.7rem 0.95rem; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--muted) 60%, transparent); }
+input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--ring); background: var(--surface); }
+textarea { resize: vertical; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; }
+.span-2 { grid-column: span 2; }
+.row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  font: inherit; font-size: 0.9rem; font-weight: 500; letter-spacing: 0.02em; cursor: pointer;
+  border-radius: 999px; padding: 0.65rem 1.4rem; border: 1px solid transparent;
+  transition: opacity 0.15s, background 0.15s, transform 0.08s, box-shadow 0.15s;
+}
+.btn:active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--grad); color: var(--accent-text); box-shadow: 0 6px 18px rgba(225, 29, 72, 0.22); }
+.btn-primary:hover:not(:disabled) { opacity: 0.92; box-shadow: 0 8px 22px rgba(225, 29, 72, 0.3); }
+.btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
+.btn-ghost:hover { background: var(--soft); border-color: var(--accent-2); }
+.btn-danger { background: transparent; color: var(--danger); border-color: var(--border); }
+.btn-danger:hover { background: var(--danger-bg); border-color: var(--danger); }
+.btn-sm { padding: 0.4rem 0.95rem; font-size: 0.8rem; }
+
+.icon-btn {
+  display: grid; place-items: center; width: 36px; height: 36px; cursor: pointer;
+  background: transparent; color: var(--accent);
+  border: 1px solid var(--border); border-radius: 50%;
+  transition: background 0.15s, border-color 0.15s;
+}
+.icon-btn:hover { background: var(--soft); border-color: var(--accent-2); }
+
+.link {
+  background: none; border: 0; padding: 0; font: inherit; font-size: 0.88rem;
+  color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 4px;
+}
+.link:hover { color: var(--accent); }
+
+.alert {
+  background: var(--danger-bg); color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  padding: 0.7rem 1rem; border-radius: 14px; font-size: 0.88rem;
+}
+
+/* ---------- Auth ---------- */
+.auth-wrap { min-height: calc(100vh - 90px); display: grid; place-items: center; padding: 1rem; }
+
+.auth-login {
+  width: 100%; max-width: 440px;
+  display: grid; gap: 1.4rem;
+  padding: 3rem 2.2rem 2.2rem;
+  border-radius: 32px; color: #fff;
+  /* two-tone diagonal in pink */
+  background: linear-gradient(135deg, #e0457b 50%, #be185d 50%);
+  box-shadow: 0 30px 60px rgba(190, 24, 93, 0.3);
+}
+
+.auth-login h1 {
+  text-align: center; margin-bottom: 0.8rem;
+  font-family: var(--sans); font-weight: 600; font-size: 1.7rem;
+  letter-spacing: 0.08em; text-transform: uppercase; color: #fff;
+}
+
+.auth-login .alert {
+  background: rgba(255, 255, 255, 0.14); color: #ffe4ea;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* pill inputs with a white circle icon at one end */
+:is(.auth-login, .editor) .pill-field {
+  display: flex; align-items: center;
+  height: 56px; padding: 0;
+  background: rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  text-transform: none; letter-spacing: 0; font-size: 1rem; font-weight: 400; color: #fff;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+:is(.auth-login, .editor) .pill-field:focus-within {
+  background: rgba(255, 255, 255, 0.26);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6);
+}
+:is(.auth-login, .editor) .pill-icon {
+  flex: none; width: 66px; height: 66px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: #fff; color: #be185d;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+}
+:is(.auth-login, .editor) .pill-field input,
+:is(.auth-login, .editor) .pill-field input:focus {
+  flex: 1; min-width: 0; height: 100%;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  padding: 0 1.3rem; color: #fff; font-size: 1rem;
+}
+:is(.auth-login, .editor) .pill-field input::placeholder { color: rgba(255, 255, 255, 0.88); }
+
+:is(.auth-login, .editor) .pill-btn {
+  height: 58px; margin-top: 1rem; border: 0; border-radius: 999px; cursor: pointer;
+  background: #fff; color: #be185d;
+  font: inherit; font-size: 1rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  transition: transform 0.08s, box-shadow 0.15s, opacity 0.15s;
+}
+:is(.auth-login, .editor) .pill-btn:hover:not(:disabled) { box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28); }
+:is(.auth-login, .editor) .pill-btn:active { transform: scale(0.98); }
+:is(.auth-login, .editor) .pill-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.auth-login .auth-switch {
+  justify-self: center; background: none; border: 0; cursor: pointer;
+  font: inherit; font-size: 0.88rem; color: rgba(255, 255, 255, 0.78);
+  text-decoration: underline; text-underline-offset: 4px;
+}
+.auth-login .auth-switch:hover { color: #fff; }
+
+@media (max-width: 640px) {
+  .auth-login { padding: 2.4rem 1.4rem 1.8rem; border-radius: 26px; }
+  .auth-login h1 { font-size: 1.45rem; }
+}
+
+/* ---------- Products page ---------- */
+.hero {
+  display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  padding: 2.2rem 2.4rem; border-radius: 28px; color: #fff;
+  background: linear-gradient(135deg, #e0457b 50%, #be185d 50%);
+  box-shadow: 0 24px 50px rgba(190, 24, 93, 0.26);
+}
+.hero h1 {
+  font-family: var(--sans); font-weight: 600; font-size: 2rem;
+  letter-spacing: 0.08em; text-transform: uppercase; color: #fff; margin: 0.2rem 0 0.3rem;
+}
+.eyebrow { font-size: 0.7rem; letter-spacing: 0.22em; text-transform: uppercase; opacity: 0.85; }
+.hero-sub { color: rgba(255, 255, 255, 0.88); font-size: 0.95rem; }
+.hero-count {
+  background: #fff; color: #be185d; border-radius: 999px;
+  padding: 0.6rem 1.3rem; font-size: 0.9rem; white-space: nowrap;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+}
+.hero-count strong { font-size: 1.15rem; font-weight: 600; margin-right: 0.2rem; }
+
+/* admin editor: same pink pill language as login */
+.editor {
+  display: grid; gap: 1.3rem; padding: 1.9rem 2rem; border-radius: 28px; color: #fff;
+  background: linear-gradient(135deg, #e0457b 50%, #be185d 50%);
+  box-shadow: 0 24px 50px rgba(190, 24, 93, 0.22);
+}
+.editor h2 {
+  font-family: var(--sans); font-weight: 600; font-size: 1rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: #fff;
+}
+.editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.editor .wide { grid-column: 1 / -1; }
+.editor .pill-peso { font-size: 1.35rem; font-weight: 600; }
+.editor .pill-area,
+.editor .pill-area:focus {
+  width: 100%; border: 0; border-radius: 28px; resize: vertical;
+  background: rgba(255, 255, 255, 0.24); color: #fff;
+  padding: 1rem 1.5rem; font-size: 1rem; box-shadow: none;
+}
+.editor .pill-area:focus { background: rgba(255, 255, 255, 0.3); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6); }
+.editor .pill-area::placeholder { color: rgba(255, 255, 255, 0.88); }
+.editor .pill-btn { margin-top: 0; height: 52px; padding: 0 2rem; }
+.editor .pill-btn.ghost { background: transparent; color: #fff; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.75); }
+.editor .pill-btn.ghost:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); box-shadow: inset 0 0 0 2px #fff; }
+
+/* product cards */
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.1rem; }
+.product {
+  display: flex; flex-direction: column; gap: 0.5rem; padding: 1.3rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 26px; box-shadow: var(--shadow);
+  transition: transform 0.15s, border-color 0.15s;
+}
+.product:hover { transform: translateY(-3px); border-color: var(--accent-2); }
+.product-top { display: flex; justify-content: space-between; align-items: center; }
+.product-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--grad); color: var(--accent-text);
+  font-family: var(--serif); font-size: 1.5rem;
+  box-shadow: 0 8px 18px rgba(225, 29, 72, 0.25);
+}
+.product-price { font-weight: 600; font-size: 1.05rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+.product h2 { font-size: 1.3rem; margin-top: 0.5rem; }
+.product p { font-size: 0.9rem; flex: 1; }
+.product-foot {
+  display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+  margin-top: 0.4rem; padding-top: 0.85rem; border-top: 1px dashed var(--border);
+}
+.chip {
+  background: var(--soft); color: var(--accent);
+  border-radius: 999px; padding: 0.3rem 0.9rem; font-size: 0.8rem; font-weight: 500;
+}
+.empty { grid-column: 1 / -1; text-align: center; color: var(--muted); padding: 2.5rem 1rem; }
+
+/* ---------- Mobile ---------- */
+@media (max-width: 640px) {
+  h1 { font-size: 1.8rem; }
+  .who { display: none; }
+  .hero { flex-direction: column; align-items: flex-start; padding: 1.7rem 1.4rem; }
+  .hero h1 { font-size: 1.6rem; }
+  .editor { padding: 1.5rem 1.2rem; }
+  .editor-grid { grid-template-columns: 1fr; }
+  .product-grid { grid-template-columns: 1fr; }
 }
