@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "./api";
+import "./Products.css";
 
 const empty = { product_name: "", description: "", price: "", quantity: "" };
 const peso = (n) => `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
